@@ -12,25 +12,13 @@ library(keras) # use install_keras() if running for the first time. See https://
 # running the model too
 source("parameters.R")
 
-
-# load the data. We don't need most of the columns in it, and we need to clean the strings.
-pet_data <- 
-  read_csv("seattle_pet_licenses.csv", 
-           col_types = cols_only(`Animal's Name` = col_character(),
-             Species = col_character(),
-             `Primary Breed` = col_character(),
-             `Secondary Breed` = col_character())) %>%
-  rename(name = `Animal's Name`,
-         species = `Species`,
-         primary_breed = `Primary Breed`,
-         secondary_breed = `Secondary Breed`) %>%
+derby_data <- read_csv("derby_names.csv") %>%
   mutate_all(toupper) %>%
-  filter(!is.na(name),!is.na(species)) %>% # remove any missing a name or species
-  filter(!str_detect(name,"[^ \\.-[a-zA-Z]]")) %>% # remove names with weird characters
+  filter(!is.na(skater_name)) %>% # remove any missing a name or species
+  mutate(skater_name = str_remove_all(skater_name, "[^ \\.-[a-zA-Z]]")) %>% # remove names with weird characters
   mutate_all(stringi::stri_trans_tolower) %>%
-  filter(name != "") %>%
+  filter(skater_name != "") %>%
   mutate(id = row_number())
-
 
 # modify the data so it's ready for a model
 # first we add a character to signify the end of the name ("+")
@@ -38,10 +26,9 @@ pet_data <-
 # finally we make them sequences of the same length. So they can form a matrix
 
 # the subsequence data
-subsequence_data <-
-  pet_data %>%
+subsequence_data <- derby_data %>%
   mutate(accumulated_name =
-           name %>%
+           skater_name %>%
            str_c("+") %>% # add a stop character
            str_split("") %>% # split into characters
            map( ~ purrr::accumulate(.x,c)) # make into cumulative sequences
@@ -74,8 +61,8 @@ input <- layer_input(shape = c(max_length,num_characters))
 # we'd want to use more lstm layers instead of just two
 output <- 
   input %>%
-  layer_lstm(units = 32, return_sequences = TRUE) %>%
-  layer_lstm(units = 32, return_sequences = FALSE) %>%
+  layer_lstm(units = 64, return_sequences = TRUE) %>%
+  layer_lstm(units = 64, return_sequences = FALSE) %>%
   layer_dropout(rate = 0.2) %>%
   layer_dense(num_characters) %>%
   layer_activation("softmax")
@@ -96,7 +83,7 @@ fit_results <- model %>% keras::fit(
   x_name, 
   y_name,
   batch_size = 64,
-  epochs = 25
+  epochs = 5
 )
 
 # SAVE THE MODEL ---------------
