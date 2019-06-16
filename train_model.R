@@ -83,7 +83,7 @@ fit_results <- model %>% keras::fit(
   x_name, 
   y_name,
   batch_size = 64,
-  epochs = 5
+  epochs = 25
 )
 
 # SAVE THE MODEL ---------------
